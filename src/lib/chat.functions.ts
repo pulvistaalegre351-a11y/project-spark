@@ -75,7 +75,7 @@ export const sendChatMessage = createServerFn({ method: "POST" })
     for (const api of apis) {
       const started = Date.now();
       try {
-        const model = api.model || bot.model_default || "gpt-4o-mini";
+        const model = api.model || "gpt-4o-mini";
         const body = {
           model,
           messages,

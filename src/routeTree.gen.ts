@@ -9,38 +9,149 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedChatbotsRouteImport } from './routes/_authenticated/chatbots'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
+import { Route as AuthenticatedApisRouteImport } from './routes/_authenticated/apis'
+import { Route as AuthenticatedChatbotsIdRouteImport } from './routes/_authenticated/chatbots.$id'
+import { Route as AuthenticatedChatIdRouteImport } from './routes/_authenticated/chat.$id'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatbotsRoute = AuthenticatedChatbotsRouteImport.update({
+  id: '/chatbots',
+  path: '/chatbots',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedApisRoute = AuthenticatedApisRouteImport.update({
+  id: '/apis',
+  path: '/apis',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedChatbotsIdRoute = AuthenticatedChatbotsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedChatbotsRoute,
+} as any)
+const AuthenticatedChatIdRoute = AuthenticatedChatIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedChatRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/apis': typeof AuthenticatedApisRoute
+  '/chat': typeof AuthenticatedChatRouteWithChildren
+  '/chatbots': typeof AuthenticatedChatbotsRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/chatbots/$id': typeof AuthenticatedChatbotsIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/apis': typeof AuthenticatedApisRoute
+  '/chat': typeof AuthenticatedChatRouteWithChildren
+  '/chatbots': typeof AuthenticatedChatbotsRouteWithChildren
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/chat/$id': typeof AuthenticatedChatIdRoute
+  '/chatbots/$id': typeof AuthenticatedChatbotsIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/apis': typeof AuthenticatedApisRoute
+  '/_authenticated/chat': typeof AuthenticatedChatRouteWithChildren
+  '/_authenticated/chatbots': typeof AuthenticatedChatbotsRouteWithChildren
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/chat/$id': typeof AuthenticatedChatIdRoute
+  '/_authenticated/chatbots/$id': typeof AuthenticatedChatbotsIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/apis'
+    | '/chat'
+    | '/chatbots'
+    | '/dashboard'
+    | '/chat/$id'
+    | '/chatbots/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/apis'
+    | '/chat'
+    | '/chatbots'
+    | '/dashboard'
+    | '/chat/$id'
+    | '/chatbots/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/apis'
+    | '/_authenticated/chat'
+    | '/_authenticated/chatbots'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/chat/$id'
+    | '/_authenticated/chatbots/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +159,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chatbots': {
+      id: '/_authenticated/chatbots'
+      path: '/chatbots'
+      fullPath: '/chatbots'
+      preLoaderRoute: typeof AuthenticatedChatbotsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/apis': {
+      id: '/_authenticated/apis'
+      path: '/apis'
+      fullPath: '/apis'
+      preLoaderRoute: typeof AuthenticatedApisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chatbots/$id': {
+      id: '/_authenticated/chatbots/$id'
+      path: '/$id'
+      fullPath: '/chatbots/$id'
+      preLoaderRoute: typeof AuthenticatedChatbotsIdRouteImport
+      parentRoute: typeof AuthenticatedChatbotsRoute
+    }
+    '/_authenticated/chat/$id': {
+      id: '/_authenticated/chat/$id'
+      path: '/$id'
+      fullPath: '/chat/$id'
+      preLoaderRoute: typeof AuthenticatedChatIdRouteImport
+      parentRoute: typeof AuthenticatedChatRoute
+    }
   }
 }
 
+interface AuthenticatedChatRouteChildren {
+  AuthenticatedChatIdRoute: typeof AuthenticatedChatIdRoute
+}
+
+const AuthenticatedChatRouteChildren: AuthenticatedChatRouteChildren = {
+  AuthenticatedChatIdRoute: AuthenticatedChatIdRoute,
+}
+
+const AuthenticatedChatRouteWithChildren =
+  AuthenticatedChatRoute._addFileChildren(AuthenticatedChatRouteChildren)
+
+interface AuthenticatedChatbotsRouteChildren {
+  AuthenticatedChatbotsIdRoute: typeof AuthenticatedChatbotsIdRoute
+}
+
+const AuthenticatedChatbotsRouteChildren: AuthenticatedChatbotsRouteChildren = {
+  AuthenticatedChatbotsIdRoute: AuthenticatedChatbotsIdRoute,
+}
+
+const AuthenticatedChatbotsRouteWithChildren =
+  AuthenticatedChatbotsRoute._addFileChildren(
+    AuthenticatedChatbotsRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedApisRoute: typeof AuthenticatedApisRoute
+  AuthenticatedChatRoute: typeof AuthenticatedChatRouteWithChildren
+  AuthenticatedChatbotsRoute: typeof AuthenticatedChatbotsRouteWithChildren
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedApisRoute: AuthenticatedApisRoute,
+  AuthenticatedChatRoute: AuthenticatedChatRouteWithChildren,
+  AuthenticatedChatbotsRoute: AuthenticatedChatbotsRouteWithChildren,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
