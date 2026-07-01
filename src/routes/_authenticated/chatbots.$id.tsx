@@ -58,6 +58,31 @@ function EditBot() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kb", id] }),
   });
 
+  // WhatsApp integrations
+  const { data: waList } = useQuery({
+    queryKey: ["wa", id],
+    queryFn: async () => (await supabase.from("whatsapp_integrations").select("*").eq("chatbot_id", id).order("created_at", { ascending: false })).data ?? [],
+  });
+  const [wa, setWa] = useState({ display_name: "WhatsApp", phone_number_id: "", waba_id: "", access_token: "", verify_token: "" });
+  const addWa = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("whatsapp_integrations").insert({
+        user_id: u.user!.id, chatbot_id: id, ...wa,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { setWa({ display_name: "WhatsApp", phone_number_id: "", waba_id: "", access_token: "", verify_token: "" }); toast.success("Integração adicionada"); qc.invalidateQueries({ queryKey: ["wa", id] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const delWa = useMutation({
+    mutationFn: async (wid: string) => { await supabase.from("whatsapp_integrations").delete().eq("id", wid); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa", id] }),
+  });
+  const webhookUrl = typeof window !== "undefined" ? `${window.location.origin}/api/public/whatsapp/webhook` : "";
+  const copy = (v: string) => { navigator.clipboard.writeText(v); toast.success("Copiado"); };
+
+
   if (!form) return <div className="p-8">Carregando…</div>;
 
   return (
