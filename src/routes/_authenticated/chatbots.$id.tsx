@@ -95,6 +95,7 @@ function EditBot() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="ai">IA</TabsTrigger>
           <TabsTrigger value="knowledge">Conhecimento</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
         </TabsList>
 
