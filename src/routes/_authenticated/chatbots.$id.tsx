@@ -1,0 +1,134 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { PERSONALITIES } from "@/lib/personalities";
+import { ArrowLeft, Trash2, Plus } from "lucide-react";
+
+export const Route = createFileRoute("/_authenticated/chatbots/$id")({ component: EditBot });
+
+function EditBot() {
+  const { id } = Route.useParams();
+  const qc = useQueryClient();
+  const [form, setForm] = useState<any>(null);
+
+  const { data: bot } = useQuery({
+    queryKey: ["chatbot", id],
+    queryFn: async () => (await supabase.from("chatbots").select("*").eq("id", id).single()).data,
+  });
+  useEffect(() => { if (bot) setForm(bot); }, [bot]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const { user_id, id: _, created_at, updated_at, ...patch } = form;
+      const { error } = await supabase.from("chatbots").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Salvo"); qc.invalidateQueries({ queryKey: ["chatbot", id] }); qc.invalidateQueries({ queryKey: ["chatbots"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // Knowledge base
+  const { data: kb } = useQuery({
+    queryKey: ["kb", id],
+    queryFn: async () => (await supabase.from("knowledge_base").select("*").eq("chatbot_id", id).order("created_at", { ascending: false })).data ?? [],
+  });
+  const [kbTitle, setKbTitle] = useState("");
+  const [kbContent, setKbContent] = useState("");
+  const addKb = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("knowledge_base").insert({
+        user_id: u.user!.id, chatbot_id: id, title: kbTitle, content: kbContent, source_type: "text",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { setKbTitle(""); setKbContent(""); toast.success("Conhecimento adicionado"); qc.invalidateQueries({ queryKey: ["kb", id] }); },
+  });
+  const delKb = useMutation({
+    mutationFn: async (kid: string) => { await supabase.from("knowledge_base").delete().eq("id", kid); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["kb", id] }),
+  });
+
+  if (!form) return <div className="p-8">Carregando…</div>;
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <Link to="/chatbots" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mb-4"><ArrowLeft className="w-3 h-3" />Voltar</Link>
+      <h1 className="font-display text-3xl font-semibold mb-6">{form.name}</h1>
+
+      <Tabs defaultValue="general">
+        <TabsList>
+          <TabsTrigger value="general">Geral</TabsTrigger>
+          <TabsTrigger value="ai">IA</TabsTrigger>
+          <TabsTrigger value="knowledge">Conhecimento</TabsTrigger>
+          <TabsTrigger value="widget">Widget</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-4 mt-4">
+          <div><Label>Nome</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+          <div><Label>Descrição</Label><Textarea value={form.description ?? ""} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+          <div><Label>Prompt Mestre (System)</Label><Textarea rows={10} value={form.system_prompt} onChange={e => setForm({ ...form, system_prompt: e.target.value })} /></div>
+          <div><Label>Personalidade</Label>
+            <Select value={form.personality} onValueChange={v => {
+              const p = PERSONALITIES.find(x => x.value === v);
+              setForm({ ...form, personality: v, system_prompt: p && p.prompt ? p.prompt : form.system_prompt });
+            }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{PERSONALITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="ai" className="space-y-6 mt-4">
+          <div><Label>Temperatura: {form.temperature}</Label><Slider value={[Number(form.temperature)]} min={0} max={2} step={0.1} onValueChange={([v]) => setForm({ ...form, temperature: v })} /></div>
+          <div><Label>Top P: {form.top_p}</Label><Slider value={[Number(form.top_p)]} min={0} max={1} step={0.05} onValueChange={([v]) => setForm({ ...form, top_p: v })} /></div>
+          <div><Label>Frequency Penalty: {form.frequency_penalty}</Label><Slider value={[Number(form.frequency_penalty)]} min={-2} max={2} step={0.1} onValueChange={([v]) => setForm({ ...form, frequency_penalty: v })} /></div>
+          <div><Label>Presence Penalty: {form.presence_penalty}</Label><Slider value={[Number(form.presence_penalty)]} min={-2} max={2} step={0.1} onValueChange={([v]) => setForm({ ...form, presence_penalty: v })} /></div>
+          <div><Label>Max Tokens</Label><Input type="number" value={form.max_tokens} onChange={e => setForm({ ...form, max_tokens: parseInt(e.target.value) || 2048 })} /></div>
+          <div><Label>Memória (últimas mensagens)</Label><Input type="number" value={form.memory_max_messages} onChange={e => setForm({ ...form, memory_max_messages: parseInt(e.target.value) || 20 })} /></div>
+        </TabsContent>
+
+        <TabsContent value="knowledge" className="space-y-4 mt-4">
+          <div className="surface rounded-xl p-4 space-y-2">
+            <Label>Novo item</Label>
+            <Input placeholder="Título" value={kbTitle} onChange={e => setKbTitle(e.target.value)} />
+            <Textarea rows={6} placeholder="Cole texto, FAQ, informações da empresa..." value={kbContent} onChange={e => setKbContent(e.target.value)} />
+            <Button onClick={() => addKb.mutate()} disabled={!kbTitle || !kbContent} className="bg-[image:var(--gradient-neon)] text-primary-foreground border-0"><Plus className="w-3 h-3 mr-1" />Adicionar</Button>
+          </div>
+          <div className="space-y-2">
+            {(kb ?? []).map(k => (
+              <div key={k.id} className="surface rounded-lg p-3 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm">{k.title}</div>
+                  <div className="text-xs text-muted-foreground truncate">{k.content}</div>
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => delKb.mutate(k.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="widget" className="space-y-4 mt-4">
+          <div><Label>Cor do widget</Label><Input type="color" value={form.widget_color} onChange={e => setForm({ ...form, widget_color: e.target.value })} className="w-24 h-10" /></div>
+          <div><Label>Mensagem inicial</Label><Input value={form.widget_greeting ?? ""} onChange={e => setForm({ ...form, widget_greeting: e.target.value })} /></div>
+          <div className="surface rounded-xl p-4">
+            <Label>Código de incorporação</Label>
+            <pre className="mt-2 p-3 bg-background rounded text-xs overflow-x-auto"><code>{`<script>window.CHATBOT_ID="${form.id}"</script>\n<script src="https://seu-dominio/widget.js" async></script>`}</code></pre>
+            <p className="text-xs text-muted-foreground mt-2">Widget completo em breve.</p>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Button onClick={() => save.mutate()} disabled={save.isPending} className="mt-6 bg-[image:var(--gradient-neon)] text-primary-foreground border-0">Salvar alterações</Button>
+    </div>
+  );
+}
