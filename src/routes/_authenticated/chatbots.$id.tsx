@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { PERSONALITIES } from "@/lib/personalities";
-import { ArrowLeft, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/chatbots/$id")({ component: EditBot });
 
