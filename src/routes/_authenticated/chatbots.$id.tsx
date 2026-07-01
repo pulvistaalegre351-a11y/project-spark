@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { PERSONALITIES } from "@/lib/personalities";
-import { ArrowLeft, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Copy } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/chatbots/$id")({ component: EditBot });
 
@@ -58,6 +58,31 @@ function EditBot() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kb", id] }),
   });
 
+  // WhatsApp integrations
+  const { data: waList } = useQuery({
+    queryKey: ["wa", id],
+    queryFn: async () => (await supabase.from("whatsapp_integrations").select("*").eq("chatbot_id", id).order("created_at", { ascending: false })).data ?? [],
+  });
+  const [wa, setWa] = useState({ display_name: "WhatsApp", phone_number_id: "", waba_id: "", access_token: "", verify_token: "" });
+  const addWa = useMutation({
+    mutationFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("whatsapp_integrations").insert({
+        user_id: u.user!.id, chatbot_id: id, ...wa,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { setWa({ display_name: "WhatsApp", phone_number_id: "", waba_id: "", access_token: "", verify_token: "" }); toast.success("Integração adicionada"); qc.invalidateQueries({ queryKey: ["wa", id] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+  const delWa = useMutation({
+    mutationFn: async (wid: string) => { await supabase.from("whatsapp_integrations").delete().eq("id", wid); },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["wa", id] }),
+  });
+  const webhookUrl = typeof window !== "undefined" ? `${window.location.origin}/api/public/whatsapp/webhook` : "";
+  const copy = (v: string) => { navigator.clipboard.writeText(v); toast.success("Copiado"); };
+
+
   if (!form) return <div className="p-8">Carregando…</div>;
 
   return (
@@ -70,6 +95,7 @@ function EditBot() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="ai">IA</TabsTrigger>
           <TabsTrigger value="knowledge">Conhecimento</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
         </TabsList>
 
@@ -116,6 +142,50 @@ function EditBot() {
             ))}
           </div>
         </TabsContent>
+
+        <TabsContent value="whatsapp" className="space-y-4 mt-4">
+          <div className="surface rounded-xl p-4 space-y-3 text-sm">
+            <p className="font-medium">Como conectar (WhatsApp Cloud API oficial da Meta):</p>
+            <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs">
+              <li>Acesse <a className="text-primary underline" href="https://developers.facebook.com/apps" target="_blank" rel="noreferrer">developers.facebook.com</a> e crie um App do tipo "Business".</li>
+              <li>Adicione o produto <b>WhatsApp</b>. A Meta te dá um número de teste grátis.</li>
+              <li>Copie o <b>Phone Number ID</b>, o <b>WhatsApp Business Account ID</b> e o <b>Access Token</b>.</li>
+              <li>Invente um <b>Verify Token</b> (qualquer texto secreto) e cole abaixo.</li>
+              <li>No painel Meta, em Webhooks, cole a URL e o Verify Token, assine em <b>messages</b>.</li>
+            </ol>
+            <div>
+              <Label className="text-xs">URL do Webhook (cole no painel Meta)</Label>
+              <div className="flex gap-2 mt-1">
+                <Input readOnly value={webhookUrl} className="font-mono text-xs" />
+                <Button size="icon" variant="outline" onClick={() => copy(webhookUrl)}><Copy className="w-3 h-3" /></Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="surface rounded-xl p-4 space-y-2">
+            <Label>Nova integração</Label>
+            <Input placeholder="Nome (ex: Atendimento)" value={wa.display_name} onChange={e => setWa({ ...wa, display_name: e.target.value })} />
+            <Input placeholder="Phone Number ID" value={wa.phone_number_id} onChange={e => setWa({ ...wa, phone_number_id: e.target.value })} />
+            <Input placeholder="WhatsApp Business Account ID (opcional)" value={wa.waba_id} onChange={e => setWa({ ...wa, waba_id: e.target.value })} />
+            <Input placeholder="Access Token (permanente recomendado)" type="password" value={wa.access_token} onChange={e => setWa({ ...wa, access_token: e.target.value })} />
+            <Input placeholder="Verify Token (você inventa)" value={wa.verify_token} onChange={e => setWa({ ...wa, verify_token: e.target.value })} />
+            <Button onClick={() => addWa.mutate()} disabled={!wa.phone_number_id || !wa.access_token || !wa.verify_token} className="bg-[image:var(--gradient-neon)] text-primary-foreground border-0"><Plus className="w-3 h-3 mr-1" />Conectar</Button>
+          </div>
+
+          <div className="space-y-2">
+            {(waList ?? []).map(w => (
+              <div key={w.id} className="surface rounded-lg p-3 flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-sm">{w.display_name}</div>
+                  <div className="text-xs text-muted-foreground">Phone ID: {w.phone_number_id} · {w.is_active ? "Ativo" : "Inativo"}</div>
+                  {w.last_error && <div className="text-xs text-destructive mt-1">{w.last_error}</div>}
+                </div>
+                <Button size="icon" variant="ghost" onClick={() => delWa.mutate(w.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
 
         <TabsContent value="widget" className="space-y-4 mt-4">
           <div><Label>Cor do widget</Label><Input type="color" value={form.widget_color} onChange={e => setForm({ ...form, widget_color: e.target.value })} className="w-24 h-10" /></div>

@@ -330,6 +330,101 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_conversations: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          integration_id: string
+          wa_phone: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          integration_id: string
+          wa_phone: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          integration_id?: string
+          wa_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_conversations_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_integrations: {
+        Row: {
+          access_token: string
+          chatbot_id: string
+          created_at: string
+          display_name: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          last_message_at: string | null
+          phone_number_id: string
+          updated_at: string
+          user_id: string
+          verify_token: string
+          waba_id: string | null
+        }
+        Insert: {
+          access_token: string
+          chatbot_id: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_message_at?: string | null
+          phone_number_id: string
+          updated_at?: string
+          user_id: string
+          verify_token: string
+          waba_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          chatbot_id?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_message_at?: string | null
+          phone_number_id?: string
+          updated_at?: string
+          user_id?: string
+          verify_token?: string
+          waba_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_integrations_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
