@@ -14,16 +14,372 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      api_providers: {
+        Row: {
+          api_key: string
+          company: string | null
+          created_at: string
+          daily_limit: number | null
+          endpoint: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          last_used_at: string | null
+          model: string
+          monthly_limit: number | null
+          name: string
+          priority: number
+          provider_type: Database["public"]["Enums"]["api_provider_type"]
+          tokens_used_month: number
+          tokens_used_today: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          company?: string | null
+          created_at?: string
+          daily_limit?: number | null
+          endpoint: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_used_at?: string | null
+          model: string
+          monthly_limit?: number | null
+          name: string
+          priority?: number
+          provider_type?: Database["public"]["Enums"]["api_provider_type"]
+          tokens_used_month?: number
+          tokens_used_today?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          company?: string | null
+          created_at?: string
+          daily_limit?: number | null
+          endpoint?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_used_at?: string | null
+          model?: string
+          monthly_limit?: number | null
+          name?: string
+          priority?: number
+          provider_type?: Database["public"]["Enums"]["api_provider_type"]
+          tokens_used_month?: number
+          tokens_used_today?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chatbots: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          custom_personality: string | null
+          description: string | null
+          frequency_penalty: number
+          id: string
+          is_active: boolean
+          max_tokens: number
+          memory_enabled: boolean
+          memory_max_messages: number
+          name: string
+          personality: Database["public"]["Enums"]["personality_type"]
+          presence_penalty: number
+          streaming: boolean
+          system_prompt: string
+          temperature: number
+          top_p: number
+          updated_at: string
+          user_id: string
+          widget_color: string
+          widget_greeting: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          custom_personality?: string | null
+          description?: string | null
+          frequency_penalty?: number
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          memory_enabled?: boolean
+          memory_max_messages?: number
+          name: string
+          personality?: Database["public"]["Enums"]["personality_type"]
+          presence_penalty?: number
+          streaming?: boolean
+          system_prompt?: string
+          temperature?: number
+          top_p?: number
+          updated_at?: string
+          user_id: string
+          widget_color?: string
+          widget_greeting?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          custom_personality?: string | null
+          description?: string | null
+          frequency_penalty?: number
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          memory_enabled?: boolean
+          memory_max_messages?: number
+          name?: string
+          personality?: Database["public"]["Enums"]["personality_type"]
+          presence_penalty?: number
+          streaming?: boolean
+          system_prompt?: string
+          temperature?: number
+          top_p?: number
+          updated_at?: string
+          user_id?: string
+          widget_color?: string
+          widget_greeting?: string | null
+        }
+        Relationships: []
+      }
+      conversations: {
+        Row: {
+          chatbot_id: string
+          created_at: string
+          id: string
+          is_favorite: boolean
+          title: string
+          total_tokens: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chatbot_id: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          title?: string
+          total_tokens?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chatbot_id?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          title?: string
+          total_tokens?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_base: {
+        Row: {
+          chatbot_id: string
+          content: string
+          created_at: string
+          id: string
+          source_type: Database["public"]["Enums"]["knowledge_source_type"]
+          source_url: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          chatbot_id: string
+          content: string
+          created_at?: string
+          id?: string
+          source_type?: Database["public"]["Enums"]["knowledge_source_type"]
+          source_url?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          chatbot_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          source_type?: Database["public"]["Enums"]["knowledge_source_type"]
+          source_url?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_chatbot_id_fkey"
+            columns: ["chatbot_id"]
+            isOneToOne: false
+            referencedRelation: "chatbots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          api_provider_id: string | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          model_used: string | null
+          response_time_ms: number | null
+          role: Database["public"]["Enums"]["message_role"]
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          api_provider_id?: string | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          model_used?: string | null
+          response_time_ms?: number | null
+          role: Database["public"]["Enums"]["message_role"]
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          api_provider_id?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          model_used?: string | null
+          response_time_ms?: number | null
+          role?: Database["public"]["Enums"]["message_role"]
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_api_provider_id_fkey"
+            columns: ["api_provider_id"]
+            isOneToOne: false
+            referencedRelation: "api_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      api_provider_type:
+        | "openai"
+        | "gemini"
+        | "anthropic"
+        | "deepseek"
+        | "groq"
+        | "openrouter"
+        | "mistral"
+        | "cohere"
+        | "together"
+        | "ollama"
+        | "lmstudio"
+        | "openai_compatible"
+        | "custom"
+      app_role: "admin" | "user"
+      knowledge_source_type:
+        | "text"
+        | "pdf"
+        | "docx"
+        | "txt"
+        | "csv"
+        | "json"
+        | "markdown"
+        | "html"
+        | "url"
+        | "faq"
+      message_role: "user" | "assistant" | "system"
+      personality_type:
+        | "professional"
+        | "friendly"
+        | "salesperson"
+        | "support"
+        | "lawyer"
+        | "doctor"
+        | "consultant"
+        | "custom"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +506,46 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      api_provider_type: [
+        "openai",
+        "gemini",
+        "anthropic",
+        "deepseek",
+        "groq",
+        "openrouter",
+        "mistral",
+        "cohere",
+        "together",
+        "ollama",
+        "lmstudio",
+        "openai_compatible",
+        "custom",
+      ],
+      app_role: ["admin", "user"],
+      knowledge_source_type: [
+        "text",
+        "pdf",
+        "docx",
+        "txt",
+        "csv",
+        "json",
+        "markdown",
+        "html",
+        "url",
+        "faq",
+      ],
+      message_role: ["user", "assistant", "system"],
+      personality_type: [
+        "professional",
+        "friendly",
+        "salesperson",
+        "support",
+        "lawyer",
+        "doctor",
+        "consultant",
+        "custom",
+      ],
+    },
   },
 } as const
