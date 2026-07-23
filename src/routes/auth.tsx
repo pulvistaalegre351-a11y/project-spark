@@ -19,7 +19,9 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    navigate({ to: "/dashboard" });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/dashboard" });
+    });
   }, [navigate]);
 
   async function handleLogin(e: React.FormEvent) {
