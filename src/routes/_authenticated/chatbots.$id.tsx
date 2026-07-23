@@ -95,7 +95,8 @@ function EditBot() {
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="ai">IA</TabsTrigger>
           <TabsTrigger value="knowledge">Conhecimento</TabsTrigger>
-          <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+          <TabsTrigger value="whatsapp">WhatsApp Cloud</TabsTrigger>
+          <TabsTrigger value="whatsapp-qr">WhatsApp QR</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
         </TabsList>
 
@@ -111,6 +112,16 @@ function EditBot() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{PERSONALITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
             </Select>
+          </div>
+          <div>
+            <Label>Texto para Desativar IA</Label>
+            <Input placeholder="Ex: desativar ia" value={form.pause_keyword ?? ""} onChange={e => setForm({ ...form, pause_keyword: e.target.value })} />
+            <p className="text-xs text-muted-foreground mt-1">Quando alguém digitar esse texto, o robô será pausado e não responderá mais.</p>
+          </div>
+          <div>
+            <Label>Texto para Ativar IA</Label>
+            <Input placeholder="Ex: ativar ia" value={form.resume_keyword ?? ""} onChange={e => setForm({ ...form, resume_keyword: e.target.value })} />
+            <p className="text-xs text-muted-foreground mt-1">Quando alguém digitar esse texto, o robô voltará a responder automaticamente.</p>
           </div>
         </TabsContent>
 
@@ -186,6 +197,45 @@ function EditBot() {
           </div>
         </TabsContent>
 
+        <TabsContent value="whatsapp-qr" className="space-y-4 mt-4">
+          <div className="surface rounded-xl p-4 space-y-3 text-sm">
+            <p className="font-medium">Motor de WhatsApp via QR Code</p>
+            <p className="text-xs text-muted-foreground">O sistema cria uma sessão única para o seu robô. Clique no botão, espere o QR Code aparecer, e escaneie com o seu celular.</p>
+          </div>
+          <div className="surface rounded-xl p-4 flex flex-col items-center justify-center space-y-4">
+            <Button onClick={async () => {
+              const loadingToast = toast.loading("Conectando ao motor...");
+              try {
+                // In production, this URL should be the Koyeb/Render URL from env vars
+                const engineUrl = import.meta.env.VITE_QR_ENGINE_URL || "http://localhost:3001";
+                const { data: u } = await supabase.auth.getUser();
+                const sessionName = `bot-${id}`;
+                
+                // Ensure integration exists in Supabase
+                await (supabase as any).from("qr_integrations").upsert({
+                  user_id: u.user!.id,
+                  chatbot_id: id,
+                  session_name: sessionName
+                }, { onConflict: "session_name" });
+                
+                await fetch(`${engineUrl}/session/start`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ sessionId: sessionName })
+                });
+                
+                toast.dismiss(loadingToast);
+                toast.success("Solicitação enviada. Aguarde o QR Code...");
+              } catch (e: any) {
+                toast.dismiss(loadingToast);
+                toast.error("Falha ao contatar o motor. Ele está ligado?");
+              }
+            }} className="bg-[image:var(--gradient-neon)] text-primary-foreground border-0">Iniciar / Atualizar QR Code</Button>
+          </div>
+
+          <WaQrStatus chatbotId={id} />
+        </TabsContent>
+
 
         <TabsContent value="widget" className="space-y-4 mt-4">
           <div><Label>Cor do widget</Label><Input type="color" value={form.widget_color} onChange={e => setForm({ ...form, widget_color: e.target.value })} className="w-24 h-10" /></div>
@@ -202,3 +252,40 @@ function EditBot() {
     </div>
   );
 }
+
+function WaQrStatus({ chatbotId }: { chatbotId: string }) {
+  const sessionName = `bot-${chatbotId}`;
+  
+  const { data: statusData, refetch } = useQuery({
+    queryKey: ["qr_status", sessionName],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("qr_integrations").select("*").eq("session_name", sessionName).maybeSingle();
+      return data;
+    },
+    refetchInterval: 3000 // Poll every 3s
+  });
+
+  if (!statusData) return <div className="text-sm text-muted-foreground text-center">Nenhuma sessão iniciada.</div>;
+
+  return (
+    <div className="surface rounded-xl p-4 flex flex-col items-center space-y-4">
+      <div className="text-sm font-medium">Status: <span className={statusData.status === 'connected' ? 'text-green-500' : 'text-yellow-500'}>{statusData.status}</span></div>
+      
+      {statusData.status === 'qr_ready' && statusData.qr_code && (
+         <div className="bg-white p-4 rounded-lg">
+           {/* Display QR code if we get the base64 string from the engine */}
+           <img src={statusData.qr_code} alt="WhatsApp QR Code" className="w-64 h-64" />
+         </div>
+      )}
+
+      {statusData.status === 'connected' && (
+        <div className="text-green-500 flex flex-col items-center">
+          <p>WhatsApp conectado com sucesso!</p>
+          <p className="text-sm font-semibold mt-1">{statusData.display_name !== 'WhatsApp QR' ? statusData.display_name : ''}</p>
+          <p className="text-xs text-muted-foreground mt-2">Última mensagem: {statusData.last_message_at ? new Date(statusData.last_message_at).toLocaleString() : 'Nenhuma'}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
