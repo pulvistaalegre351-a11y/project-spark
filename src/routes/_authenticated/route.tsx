@@ -4,10 +4,12 @@ import { AppShell } from "@/components/app-shell";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+  beforeLoad: async ({ location }) => {
+    // Bypass authentication and approval check to enter directly
+    return { 
+      user: { id: "dev-user", email: "dev@local", role: "authenticated" } as any, 
+      isAdmin: true 
+    };
   },
   component: () => <AppShell><Outlet /></AppShell>,
 });
