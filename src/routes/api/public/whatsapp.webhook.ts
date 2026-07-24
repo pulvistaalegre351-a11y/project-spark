@@ -6,11 +6,11 @@ export const Route = createFileRoute("/api/public/qr/webhook")({
       POST: async ({ request }) => {
         try {
           const body = await request.json();
-          console.log("Webhook called with body:", JSON.stringify(body));
-          const { sessionId, from, text, fromMe } = body;
+          console.log("Webhook called with body:", JSON.stringify({ ...body, audioBase64: body.audioBase64 ? "exists (base64 string)" : "null" }));
+          let { sessionId, from, text, fromMe, audioBase64 } = body;
           
-          if (!sessionId || !from || (!text && !fromMe)) {
-            console.log("Bad request missing fields:", { sessionId, from, text: !!text });
+          if (!sessionId || !from || (!text && !fromMe && !audioBase64)) {
+            console.log("Bad request missing fields:", { sessionId, from, text: !!text, audio: !!audioBase64 });
             return new Response("Missing params", { status: 400 });
           }
 
@@ -103,15 +103,15 @@ export const Route = createFileRoute("/api/public/qr/webhook")({
           }
 
           console.log("Generating reply for conversationId:", conversationId);
-          const reply = await generateReply(supabaseAdmin, integ.user_id, integ.chatbot_id, conversationId, text, bot.data);
-          console.log("generateReply returned:", reply);
+          const replyData = await generateReply(supabaseAdmin, integ.user_id, integ.chatbot_id, conversationId, text, bot.data, audioBase64);
+          console.log("generateReply returned:", replyData?.reply?.substring(0, 50));
 
           await supabaseAdmin
             .from("qr_integrations")
             .update({ last_message_at: new Date().toISOString() })
             .eq("id", integ.id);
 
-          return new Response(JSON.stringify({ reply }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return new Response(JSON.stringify(replyData || { reply: null }), { status: 200, headers: { 'Content-Type': 'application/json' } });
         } catch (e: any) {
           console.error("qr webhook error", e);
           return new Response("error", { status: 500 });
@@ -128,12 +128,13 @@ async function generateReply(
   chatbotId: string, 
   conversationId: string, 
   userContent: string,
-  botData: any
-): Promise<string | null> {
+  botData: any,
+  audioBase64?: string
+): Promise<{ reply: string | null; replyAudioBase64?: string | null } | null> {
   if (!botData) return null;
 
-  // Run all independent queries CONCURRENTLY to save time (makes the bot 2x faster!)
-  const [historyRes, kbRes, apisRes, _] = await Promise.all([
+  // Run independent queries concurrently
+  const [historyRes, kbRes, apisRes] = await Promise.all([
     supabaseAdmin
       .from("messages").select("role, content")
       .eq("conversation_id", conversationId)
@@ -149,18 +150,54 @@ async function generateReply(
       .from("api_providers").select("*")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .order("priority", { ascending: true }),
-
-    // Save the user's message asynchronously without waiting for it specifically
-    supabaseAdmin.from("messages").insert({
-      conversation_id: conversationId, user_id: userId,
-      role: "user", content: userContent,
-    })
+      .order("priority", { ascending: true })
   ]);
 
   const history = historyRes.data;
   const kb = kbRes.data;
   const apis = apisRes.data;
+
+  if (!apis || apis.length === 0) {
+    return { reply: "Nenhuma API de IA configurada no painel." };
+  }
+
+  const apiKey = apis[0].api_key;
+
+  // Process Audio (Speech-to-Text) if received
+  if (audioBase64) {
+    try {
+      const binaryString = atob(audioBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'audio/ogg' });
+      const formData = new FormData();
+      formData.append('file', blob, 'audio.ogg');
+      formData.append('model', 'whisper-1');
+
+      const whisperRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+        body: formData
+      });
+      if (whisperRes.ok) {
+        const whisperData = await whisperRes.json();
+        userContent = whisperData.text || "[Áudio Incompreensível]";
+        console.log("Transcribed Audio:", userContent);
+      } else {
+        console.error("Whisper Error:", await whisperRes.text());
+      }
+    } catch (e) {
+      console.error("Failed to transcribe audio", e);
+    }
+  }
+
+  // Save the user's message asynchronously without waiting for it
+  supabaseAdmin.from("messages").insert({
+    conversation_id: conversationId, user_id: userId,
+    role: "user", content: userContent,
+  }).then();
 
   const kbBlock = kb && kb.length > 0
     ? `\n\nBase de conhecimento:\n${kb.map((k: any) => `[${k.title}]\n${k.content}`).join("\n\n")}`
@@ -180,10 +217,6 @@ async function generateReply(
     } else {
       messages.push({ ...m });
     }
-  }
-
-  if (!apis || apis.length === 0) {
-    return "Nenhuma API de IA configurada no painel.";
   }
 
   for (const api of apis) {
@@ -212,14 +245,46 @@ async function generateReply(
         ?? json.content?.[0]?.text
         ?? "(resposta vazia)";
 
+      let replyAudioBase64 = null;
+
+      // Text-to-Speech se estiver ativado
+      if (botData.respond_with_audio) {
+        try {
+          const ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
+            method: 'POST',
+            headers: {
+               'Authorization': `Bearer ${api.api_key}`,
+               'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+               model: 'tts-1',
+               input: content,
+               voice: botData.audio_voice || 'alloy'
+            })
+          });
+          if (ttsRes.ok) {
+            const arrayBuffer = await ttsRes.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i += 10000) {
+                binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 10000)));
+            }
+            replyAudioBase64 = btoa(binary);
+          }
+        } catch (e) {
+          console.error("TTS error", e);
+        }
+      }
+
       await supabaseAdmin.from("messages").insert({
         conversation_id: conversationId, user_id: userId,
         role: "assistant", content, api_provider_id: api.id, model_used: model,
       });
-      return content;
+
+      return { reply: content, replyAudioBase64 };
     } catch (e) {
       continue;
     }
   }
-  return "Falha ao gerar resposta pela API.";
+  return { reply: "Falha ao gerar resposta pela API." };
 }
