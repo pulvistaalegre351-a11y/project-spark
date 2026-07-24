@@ -207,7 +207,7 @@ function EditBot() {
               const loadingToast = toast.loading("Conectando ao motor...");
               try {
                 // In production, this URL should be the Koyeb/Render URL from env vars
-                const engineUrl = import.meta.env.VITE_QR_ENGINE_URL || "http://localhost:3001";
+               const engineUrl = "https://meu-motor-whatsapp-pd2y.onrender.com";
                 const { data: u } = await supabase.auth.getUser();
                 const sessionName = `bot-${id}`;
                 
