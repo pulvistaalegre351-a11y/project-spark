@@ -132,6 +132,37 @@ function EditBot() {
           <div><Label>Presence Penalty: {form.presence_penalty}</Label><Slider value={[Number(form.presence_penalty)]} min={-2} max={2} step={0.1} onValueChange={([v]) => setForm({ ...form, presence_penalty: v })} /></div>
           <div><Label>Max Tokens</Label><Input type="number" value={form.max_tokens} onChange={e => setForm({ ...form, max_tokens: parseInt(e.target.value) || 2048 })} /></div>
           <div><Label>Memória (últimas mensagens)</Label><Input type="number" value={form.memory_max_messages} onChange={e => setForm({ ...form, memory_max_messages: parseInt(e.target.value) || 20 })} /></div>
+          
+          <div className="surface p-4 rounded-xl border border-[var(--border-primary)] space-y-4">
+            <h3 className="font-medium">Ouvidos e Boca (Voz da IA)</h3>
+            <div>
+              <Label>A IA deve responder os clientes com Áudio?</Label>
+              <Select value={form.respond_with_audio ? "yes" : "no"} onValueChange={v => setForm({ ...form, respond_with_audio: v === "yes" })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no">Não (Apenas Texto)</SelectItem>
+                  <SelectItem value="yes">Sim (Áudios Humanizados)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {form.respond_with_audio && (
+              <div>
+                <Label>Voz da IA (OpenAI TTS)</Label>
+                <Select value={form.audio_voice || "alloy"} onValueChange={v => setForm({ ...form, audio_voice: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="alloy">Alloy (Feminino Jovem)</SelectItem>
+                    <SelectItem value="nova">Nova (Feminino Sério)</SelectItem>
+                    <SelectItem value="shimmer">Shimmer (Feminino Doce)</SelectItem>
+                    <SelectItem value="echo">Echo (Masculino Calmo)</SelectItem>
+                    <SelectItem value="fable">Fable (Masculino Britânico)</SelectItem>
+                    <SelectItem value="onyx">Onyx (Masculino Forte)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="knowledge" className="space-y-4 mt-4">
@@ -207,7 +238,7 @@ function EditBot() {
               const loadingToast = toast.loading("Conectando ao motor...");
               try {
                 // In production, this URL should be the Koyeb/Render URL from env vars
-               const engineUrl = "https://meu-motor-whatsapp-pd2y.onrender.com";
+                const engineUrl = "https://meu-motor-whatsapp-pd2y.onrender.com";
                 const { data: u } = await supabase.auth.getUser();
                 const sessionName = `bot-${id}`;
                 
